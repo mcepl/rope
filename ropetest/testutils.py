@@ -1,16 +1,18 @@
+import logging
 import os.path
 import shutil
 import sys
-import logging
-logging.basicConfig(format='%(levelname)s:%(funcName)s:%(message)s',
-                    level=logging.INFO)
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
 import rope.base.project
+
 from rope.contrib import generate
+
+logging.basicConfig(format='%(levelname)s:%(funcName)s:%(message)s',
+                    level=logging.INFO)
 
 
 def sample_project(root=None, foldername=None, **kwds):

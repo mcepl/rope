@@ -1,20 +1,19 @@
 import sys
 import unittest
 
-import ropetest.projecttest
+import ropetest.advanced_oi_test
+import ropetest.builtinstest
 import ropetest.codeanalyzetest
+import ropetest.contrib
+import ropetest.historytest
+import ropetest.objectdbtest
+import ropetest.objectinfertest
+import ropetest.projecttest
 import ropetest.pycoretest
 import ropetest.pyscopestest
-import ropetest.objectinfertest
-import ropetest.objectdbtest
-import ropetest.advanced_oi_test
-import ropetest.runmodtest
-import ropetest.builtinstest
-import ropetest.historytest
-import ropetest.simplifytest
-
-import ropetest.contrib
 import ropetest.refactor
+import ropetest.runmodtest
+import ropetest.simplifytest
 
 
 def suite():
