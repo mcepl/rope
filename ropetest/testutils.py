@@ -1,3 +1,4 @@
+# import functools
 import logging
 import os.path
 import shutil
@@ -74,11 +75,16 @@ def _remove_recursively(path):
 
 def only_for(version):
     """Should be used as a decorator for a unittest.TestCase test method"""
+
+    if isinstance(version, basestring):
+        version = tuple(int(x) for x in version.split('.'))
+
+    if isinstance(version, (float, int)):
+        version = int(version), int((version - int(version)) * 10)
+
     return unittest.skipIf(
-        sys.version < version,
+        sys.version_info[:2] < version,
         'This test requires at lest {0} version of Python.'.format(version))
 
-
-def skipNotPOSIX():
-    return unittest.skipIf(os.name != 'posix',
-                           'This test works only on POSIX')
+skipNotPOSIX = unittest.skipIf(os.name != 'posix',
+                               'This test works only on POSIX')
