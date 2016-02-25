@@ -1,5 +1,5 @@
+import random
 import warnings
-from functools import partial
 
 def saveit(func):
     """A decorator that caches the return value of a function"""
@@ -57,72 +57,70 @@ def deprecated(message=None):
     return _decorator
 
 
-def cached(count):
+def cached(size):
     """A caching decorator based on parameter objects"""
     def decorator(func):
-        return _Cached(func, count)
+        cached_func = _Cached(func, size)
+        return lambda *a, **kw: cached_func(*a, **kw)
     return decorator
 
 
+# TODO: tests and benchmarks
 class _Cached(object):
 
-    def __init__(self, func, count):
+    def __init__(self, func, max_size=1000, cull_frequency=0.1):
+        """
+        :param collections.Callable func: cached callable object
+        :param int max_size: max max_size of cache
+        :param float cull_frequency: The fraction of entries that are culled\
+            when max_size is reached. Greater - frequently.
+        """
         self.func = func
-        self.cache = []
-        self.count = count
+        self.cache = dict()
+        self.max_size = max_size
+        self.cull_frequency = cull_frequency
+        self.counter = 0
 
     def __call__(self, *args, **kwds):
-        key = (args, kwds)
-        for cached_key, cached_result in self.cache:
-            if cached_key == key:
-                return cached_result
-        result = self.func(*args, **kwds)
-        self.cache.append((key, result))
-        if len(self.cache) > self.count:
-            del self.cache[0]
-        return result
-
-class memoize(object):
-    """cache the return value of a method
-
-    This class is meant to be used as a decorator of methods. The return value
-    from a given method invocation will be cached on the instance whose method
-    was invoked. All arguments passed to a method decorated with memoize must
-    be hashable.
-
-    If a memoized method is invoked directly on its class the result will not
-    be cached. Instead the method will be invoked like a static method:
-    class Obj(object):
-        @memoize
-        def add_to(self, arg):
-            return self + arg
-    Obj.add_to(1) # not enough arguments
-    Obj.add_to(1, 2) # returns 3, result is not cached
-    """
-    def __init__(self, func):
-        self.func = func
-    def __get__(self, obj, objtype=None):
-        if obj is None:
-            return self.func
-        return partial(self, obj)
-    def __call__(self, *args, **kw):
-        obj = args[0]
+        key = to_hashable((args, kwds))
         try:
-            cache = obj.__cache
-        except AttributeError:
-            cache = obj.__cache = {}
-        key = (self.func, args[1:], frozenset(kw.items()))
-        try:
-            res = cache[key]
+            item = self.cache[key]
         except KeyError:
-            res = cache[key] = self.func(*args, **kw)
-        return res
+            value = self.func(*args, **kwds)
+            self.cache[key] = [value, self._get_stamp()]
+            if self._cull_required():
+                self._cull()
+        else:
+            item[1] = self._get_stamp()
+            value = item[0]
+        return value
 
-def lazyprop(fn):
-    attr_name = '_lazy_' + fn.__name__
-    @property
-    def _lazyprop(self):
-        if not hasattr(self, attr_name):
-            setattr(self, attr_name, fn(self))
-        return getattr(self, attr_name)
-    return _lazyprop
+    def _get_stamp(self):
+        """
+        :return: stamp, currently uses counter (can be timestamp).
+        """
+        self.counter += 1
+        return self.counter
+
+    def _cull_required(self):
+        return random.random() < self.cull_frequency
+
+    def _cull(self):
+        current_size = len(self.cache)
+        if current_size > self.max_size:
+            lru_list = sorted(self.cache.items(), key=lambda x: x[1][1])
+            for key, val in lru_list[:current_size - self.max_size]:
+                del self.cache[key]
+
+
+def to_hashable(obj):
+    """
+    Makes a hashable object from a dictionary, list, tuple, set etc.
+    """
+    if isinstance(obj, (list, tuple)):
+        return tuple(to_hashable(i) for i in obj)
+    elif isinstance(obj, (set, frozenset)):
+        return frozenset(to_hashable(i) for i in obj)
+    elif isinstance(obj, dict):
+        return frozenset((k, to_hashable(v)) for k, v in obj.items())
+    return obj
