@@ -4,10 +4,11 @@ import sys
 import warnings
 
 import rope.base.fscommands
-from rope.base import exceptions, taskhandle, prefs, history, pycore, utils
 import rope.base.resourceobserver as resourceobserver
-from rope.base.resources import File, Folder, _ResourceMatcher
+
+from rope.base import exceptions, history, prefs, pycore, taskhandle, utils
 from rope.base.exceptions import ModuleNotFoundError
+from rope.base.resources import File, Folder, _ResourceMatcher
 
 try:
     import pickle
@@ -22,7 +23,6 @@ except NameError:
             exec(code, global_vars, local_vars)
 
 
-
 class _Project(object):
 
     def __init__(self, fscommands):
@@ -32,7 +32,7 @@ class _Project(object):
         self.data_files = _DataFiles(self)
         self._custom_source_folders = []
 
-    @utils.memoize
+    @utils.cached(1000)
     def get_resource(self, resource_name):
         """Get a resource in a project.
 
@@ -53,8 +53,8 @@ class _Project(object):
         elif os.path.isdir(path):
             return Folder(self, resource_name)
         else:
-            raise exceptions.ResourceNotFoundError('Unknown resource '
-                                                   + resource_name)
+            raise exceptions.ResourceNotFoundError('Unknown resource ' +
+                                                   resource_name)
 
     def get_module(self, name, folder=None):
         """Returns a `PyObject` if the module was found."""
